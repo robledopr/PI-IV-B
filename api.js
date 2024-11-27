@@ -1,56 +1,27 @@
-// Importação de módulos necessários
 const express = require('express'); // Framework para construção de APIs
 const fs = require('fs'); // Manipulação de arquivos
-const path = require('path'); // Trabalhar com caminhos de arquivos
 
 const app = express();
-const PORT = 3000;
 
-// Caminho para o arquivo JSON
-const filePath = path.join(__dirname, 'clientes.json');
+app.use(express.json()); // Middleware para permitir o uso de JSON no corpo das requisições
 
-// Middleware para permitir o uso de JSON no corpo das requisições
-app.use(express.json());
-
-/**
- * Função para carregar os dados do arquivo clientes.json
- */
-const loadData = () => {
-    try {
-        const data = fs.readFileSync(filePath, 'utf8');
-        return JSON.parse(data);
-    } catch (error) {
-        console.error("Erro ao carregar o arquivo:", error);
-        return [];
-    }
+const getClientesData = () => { // Função para carregar os dados do arquivo clientes.json
+    const jsonData = fs.readFileSync('clientes.json');
+    return JSON.parse(jsonData);
 };
 
-/**
- * Função para salvar os dados no arquivo clientes.json
- */
-const saveData = (data) => {
-    try {
-        fs.writeFileSync(filePath, JSON.stringify(data, null, 4), 'utf8');
-    } catch (error) {
-        console.error("Erro ao salvar o arquivo:", error);
-    }
+const saveClientData = data => { // Função para salvar os dados no arquivo clientes.json
+    const stringifyData = JSON.stringify(data)
+    fs.writeFileSync('clientes.json', stringifyData)
 };
 
-/**
- * Rota GET /clientes
- * Retorna todos os clientes
- */
-app.get('/clientes', (req, res) => {
-    const clientes = loadData();
+app.get('/clientes', (req, res) => {    // Retorna todos os clientes
+    const clientes = getClientesData();
     res.json(clientes);
 });
 
-/**
- * Rota GET /clientes/:id
- * Retorna um cliente específico pelo ID
- */
-app.get('/clientes/:id', (req, res) => {
-    const clientes = loadData();
+app.get('/clientes/:id', (req, res) => { // Retorna um cliente específico pelo ID
+    const clientes = getClientesData();
     const cliente = clientes.find(c => c.cliente_id === parseInt(req.params.id));
 
     if (cliente) {
@@ -60,22 +31,16 @@ app.get('/clientes/:id', (req, res) => {
     }
 });
 
-/**
- * Rota POST /clientes
- * Adiciona um novo cliente
- */
-app.post("/clientes", (req, res) => {
-    const clientes = loadData();
+app.post("/clientes", (req, res) => { // Adiciona um novo cliente
+    const clientes = getClientesData();
     const { nome, endereço, cep, data_de_nascimento, telefone } = req.body;
 
-    // Validação dos campos obrigatórios
     if (!nome || !endereço || !cep || !data_de_nascimento || !telefone) {
         return res.status(400).json({
             mensagem: "Erro: Todos os campos (nome, endereço, cep, data_de_nascimento, telefone) são obrigatórios."
         });
     }
 
-    // Criação do novo cliente
     const novoCliente = {
         cliente_id: clientes.length > 0 ? clientes[clientes.length - 1].cliente_id + 1 : 1,
         nome,
@@ -86,47 +51,38 @@ app.post("/clientes", (req, res) => {
     };
 
     clientes.push(novoCliente);
-    saveData(clientes);
+    saveClientData(clientes);
 
     res.status(201).json({ mensagem: "Cliente adicionado com sucesso", cliente: novoCliente });
 });
 
-/**
- * Rota PUT /clientes/:id
- * Atualiza os dados de um cliente existente
- */
-app.put('/clientes/:id', (req, res) => {
-    const clientes = loadData();
+app.put('/clientes/:id', (req, res) => { // Atualiza os dados de um cliente existente
+    const clientes = getClientesData();
     const clienteId = parseInt(req.params.id);
     const index = clientes.findIndex(c => c.cliente_id === clienteId);
 
     if (index !== -1) {
         clientes[index] = { ...clientes[index], ...req.body };
-        saveData(clientes);
+        saveClientData(clientes);
         res.json({ mensagem: "Cliente atualizado com sucesso", cliente: clientes[index] });
     } else {
         res.status(404).json({ mensagem: "Cliente não encontrado" });
     }
 });
 
-/**
- * Rota DELETE /clientes/:id
- * Remove um cliente existente
- */
-app.delete('/clientes/:id', (req, res) => {
-    const clientes = loadData();
+app.delete('/clientes/:id', (req, res) => { // Remove um cliente existente
+    const clientes = getClientesData();
     const clienteId = parseInt(req.params.id);
     const novosClientes = clientes.filter(c => c.cliente_id !== clienteId);
 
     if (clientes.length !== novosClientes.length) {
-        saveData(novosClientes);
+        saveClientData(novosClientes);
         res.json({ mensagem: "Cliente removido com sucesso" });
     } else {
         res.status(404).json({ mensagem: "Cliente não encontrado" });
     }
 });
 
-// Inicia o servidor
-app.listen(PORT, () => {
-    console.log(`API rodando em http://localhost:${PORT}`);
+app.listen(3000, () => { // Inicia o servidor
+    console.log('API rodando na porta 3000');
 });
